@@ -1,0 +1,449 @@
+{{extend 'layout.html'}}
+<script><!--
+    jQuery(document).ready(function(){
+    jQuery("table.sortable tbody tr").mouseover( function() {
+    jQuery(this).addClass("highlight"); }).mouseout( function() {
+    jQuery(this).removeClass("highlight"); });
+    jQuery('table.sortable tbody tr:odd').addClass('odd');
+    jQuery('table.sortable tbody tr:even').addClass('even');
+});
+//--></script>
+
+<div class="row">
+  <div class="col-md-12">
+
+{{if request.function=='index':}}
+<h3>{{=T("后台")}}</h3>
+  {{if not databases:}}{{=T("后台（没有数据库)）")}}{{pass}}
+  <ul class="nav nav-tabs" id="myTab">
+
+      <li class="nav-item"><a href="#userinfo" data-toggle="tab" class="nav-link active">用户信息</a></li>
+      <li class="nav-item"><a href="#user" data-toggle="tab" class="nav-link">用户登录信息</a></li>
+      <li class="nav-item"><a href="#taskinfo" data-toggle="tab" class="nav-link">任务信息</a></li>
+      <li class="nav-item"><a href="#handin" data-toggle="tab" class="nav-link">提交信息</a></li>
+      <li class="nav-item"><a href="#groupinfo" data-toggle="tab" class="nav-link">用户组信息</a></li>
+      <li class="nav-item"><a href="#membership" data-toggle="tab" class="nav-link">用户的组归属信息</a></li>
+         {{if auth.has_membership(group_id=2):}}
+            <li class="nav-item"><a href="#alltables" data-toggle="tab" class="nav-link">Tables</a></li>
+            <li class="nav-item"><a href="#hooks" data-toggle="tab" class="nav-link">Hooks</a></li>
+        {{pass}}
+  </ul>
+
+  <div class="tab-content">
+      {{if auth.has_membership(group_id=2):}}
+      <div class="tab-pane" id="alltables">
+        <table class="table table-striped">
+          {{for db in sorted(databases):}}
+            {{for table in databases[db].tables:}}
+              {{qry='%s.%s.id>0'%(db,table)}}
+              {{tbl=databases[db][table]}}
+              {{if hasattr(tbl,'_primarykey'):}}
+                {{if tbl._primarykey:}}
+                    {{firstkey=tbl[tbl._primarykey[0]]}}
+                    {{if firstkey.type in ['string','text']:}}
+                      {{qry='%s.%s.%s!=""'%(db,table,firstkey.name)}}
+                    {{else:}}
+                      {{qry='%s.%s.%s>0'%(db,table,firstkey.name)}}
+                    {{pass}}
+                {{else:}}
+                     {{qry=''}}
+                {{pass}}
+              {{pass}}
+          <tr>
+            <th style="font-size: 1.75em;">
+              &raquo; {{=A("%s.%s" % (db,table),_href=URL('select',args=[db],vars=dict(query=qry)))}}
+            </th>
+            <td>
+              {{=A(str(T('New Record')),_href=URL('insert',args=[db,table]),_class="btn btn-primary")}}
+            </td>
+          </tr>
+          {{pass}}
+          {{pass}}
+        </table>
+      </div>
+      <div class="tab-pane" id="hooks">
+      {{=LOAD('appadmin', 'hooks', ajax=True)}}
+      </div>
+      {{pass}}
+      <div class="tab-pane active" id="userinfo">
+          <table class="table table-striped">
+            <tr>
+                <th>用户ID</th>
+                <th>认证名</th>
+                <th>宿舍</th>
+                <th>综合分数</th>
+                <th>欢乐豆</th>
+                <th>{{=A(str(T('添加')),_href=URL('add_userinfo'),_class="btn btn-primary")}}</th>
+          </tr>
+          {{for auth_record in databases['db'](databases['db'].auth_user).select():}}
+              {{i_records = get_user_info_by(auth_record.username)}}
+              <tr>
+                  <td>{{=i_records.id}}</td>
+                  <td>{{=i_records.username}}</td>
+                  <td>{{=i_records.room}}</td>
+                  <td>{{=i_records.score}}</td>
+                  <td>{{=i_records.bean}}</td>
+                  <td>{{=A(str(T('修改')),_href=URL('change_userinfo',args=[i_records.username]),_class="btn btn-secondary")}}</td>
+              </tr>
+          {{pass}}
+          </table>
+      </div>
+      <div class="tab-pane" id="user">
+          <table class="table table-striped">
+              <tr>
+              <th>认证名</th>
+              <th>真实姓名</th>
+              <th>电子邮箱</th>
+                  <th>{{=A(str(T('添加')),_href=URL('add_user'),_class="btn btn-primary")}}</th>
+              </tr>
+            {{for records in databases['db'](databases['db'].auth_user).select():}}
+              <tr>
+                  <td>{{=records.username}}</td>
+                  <td>{{=records.name}}</td>
+                  <td>{{=records.email}}</td>
+                  <td>{{=A(str(T('修改')),_href=URL('change_user',args=[records.username]),_class="btn btn-secondary")}}</td>
+              </tr>
+            {{pass}}
+          </table>
+      </div>
+      <div class="tab-pane" id="taskinfo">
+          <table class="table table-striped">
+               <tr>
+              <th>任务名</th>
+              <th>创建时间</th>
+              <th>截止时间</th>
+                    <th>参与人数</th>
+                   <th>完成人数</th>
+                   <th>删除</th>
+                   <th>{{=A(str(T('添加')),_href=URL('add_task'),_class="btn btn-primary")}}</th>
+              </tr>
+              {{for records in m_db(m_db.task).select(orderby=m_db.task.create_date):}}
+              <tr>
+                    <td>{{=records.name}}</td>
+                    <td>{{=records.create_date}}</td>
+                    <td>{{=records.end_date}}</td>
+                    <td>{{=len(records.people)}}</td>
+                    <td>{{=len(records.dopeople)}}</td>
+                  <td>{{=A(str(T('删除')),_href=URL('delete_task',args=[records.id]))}}</td>
+                  <td>{{=A(str(T('修改')),_href=URL('change_task',args=[records.id]),_class="btn btn-secondary")}}</td>
+              </tr>
+              {{pass}}
+          </table>
+      </div>
+      <div class="tab-pane" id="groupinfo">
+          <table class="table table-striped">
+              <tr>
+              <th>用户组ID</th>
+              <th>用户组身份</th>
+                  <th>用户组描述</th>
+                  <td>{{=A(str(T('添加')),_href=URL('add_group',args=[records.id]),_class="btn btn-primary")}}</td>
+              </tr>
+                {{for records in databases['db'](databases['db'].auth_group).select():}}
+                    <tr>
+                        <td>{{=records.id}}</td>
+                        <td>{{=records.role}}</td>
+                        <td>{{=records.description}}</td>
+                        <td>{{=A(str(T('修改')),_href=URL('change_group',args=[records.id]),_class="btn btn-secondary")}}</td>
+                    </tr>
+                 {{pass}}
+
+          </table>
+      </div>
+      <div class="tab-pane" id="membership">
+          <table class="table table-striped">
+              <tr>
+              <th>归属关系编号</th>
+              <th>用户ID</th>
+                  <th>用户真实姓名</th>
+                  <th>用户组ID</th>
+                  <th>用户组身份</th>
+                  <th>{{=A(str(T('添加')),_href=URL('add_relation',args=[records.id]),_class="btn btn-primary")}}</th>
+              </tr>
+                {{for records in databases['db'](databases['db'].auth_membership).select():}}
+                    {{user_info = databases['db'](databases['db'].auth_user.id == records.user_id).select().first()}}
+                    {{group_info = databases['db'](databases['db'].auth_group.id == records.group_id).select().first()}}
+                    <tr>
+                        <td>{{=records.id}}</td>
+                        <td>{{=records.user_id}}</td>
+                        <td>{{=user_info.name}}</td>
+                        <td>{{=records.group_id}}</td>
+                        <td>{{=group_info.role}}</td>
+                        <td>{{=A(str(T('修改')),_href=URL('change_relation',args=[records.id]),_class="btn btn-secondary")}}</td>
+                    </tr>
+                 {{pass}}
+
+          </table>
+      </div>
+  </div>
+{{elif request.function=='select':}}
+  <h2>{{=XML(str(T("Database %s select"))%A(request.args[0],_href=URL('index'))) }}
+  </h2>
+  {{if tb:}}
+  <h3>{{=T('Traceback')}}</h3>
+  <pre>
+    {{=tb}}
+  </pre>
+  {{pass}}
+  {{if table:}}
+  {{=A(str(T('New Record')),_href=URL('insert',args=[request.args[0],table]),_class="btn btn-primary", _role="button")}}<br/><br/>
+  <hr />
+    <h3>{{=T("Rows in Table")}}</h3><br/>
+   {{else:}}
+    <h3>{{=T("Rows selected")}}</h3><br/>
+   {{pass}}
+   {{=form}}
+   <p class="text-muted">{{=T('The "query" is a condition like "db.table1.field1==\'value\'". Something like "db.table1.field1==db.table2.field2" results in a SQL JOIN.')}}<br/>
+      {{=T('Use (...)&(...) for AND, (...)|(...) for OR, and ~(...)  for NOT to build more complex queries.')}}<br/>
+      {{=T('"update" is an optional expression like "field1=\'newvalue\'". You cannot update or delete the results of a JOIN')}}</p>
+    <br/><br/>
+    <h4>{{=T("%s selected", nrows)}}</h4>
+    {{if start>0:}}{{=A(T('previous %s rows') % step,_href=URL('select',args=request.args[0],vars=dict(start=start-step)),_class="btn btn-primary")}}{{pass}}
+    {{if stop<nrows:}}{{=A(T('next %s rows') % step,_href=URL('select',args=request.args[0],vars=dict(start=start+step)),_class="btn btn-primary")}}{{pass}}
+    {{if rows:}}
+       <div style="overflow:auto; width:80%;">
+       {{linkto = lambda f, t, r: URL('update', args=[request.args[0], r, f]) if f else "#"}}
+       {{upload=URL('download',args=request.args[0])}}
+       {{=SQLTABLE(rows,linkto,upload,orderby=True,_class='table table-striped table-bordered sortable')}}
+       </div>
+    {{pass}}
+    <br/><br/>
+    <hr />
+    <h3>{{=T("Import/Export")}}</h3><br/>
+    <a href="{{=URL('csv',args=request.args[0],vars=dict(query=query))}}" class="btn btn-primary">{{=T("export as csv file")}}</a>
+  {{=formcsv or ''}}
+
+{{elif request.function=='insert':}}
+  <h2>{{=T("Database")}} {{=A(request.args[0],_href=URL('index'))}}
+    {{if hasattr(table,'_primarykey'):}}
+      {{fieldname=table._primarykey[0]}}
+      {{dbname=request.args[0]}}
+      {{tablename=request.args[1]}}
+      {{cond = table[fieldname].type in ['string','text'] and '!=""' or '>0'}}
+      {{=T("Table")}} {{=A(tablename,_href=URL('select',args=dbname,vars=dict(query='%s.%s.%s%s'%(dbname,tablename,fieldname,cond))))}}
+    {{else:}}
+      {{=T("Table")}} {{=A(request.args[1],_href=URL('select',args=request.args[0],vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
+    {{pass}}
+  </h2>
+  <h3>{{=T("New Record")}}</h3><br/>
+  {{=form}}
+{{elif request.function=='change_userinfo' or request.function=='add_userinfo':}}
+    {{if request.function=='add_userinfo':}}
+        <h3>个人信息添加</h3>
+    {{else:}}
+        <h3>个人信息修改</h3>
+    {{pass}}
+    <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+  {{=form}}
+{{elif request.function=='change_user' or request.function=='add_user':}}
+    {{if request.function=='add_user':}}
+        <h3>个人登录信息添加</h3>
+    {{else:}}
+        <h3>个人登录信息修改</h3>
+
+    {{pass}}
+    <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+  {{=form}}
+{{elif request.function=='add_task'or request.function=='change_task':}}
+    {{if request.function=='add_task':}}
+        <h3>任务添加</h3>
+    {{else:}}
+        <table>
+            <tr>
+        <td><h3 class="display:inline">任务修改</h3></td>
+            </tr>
+        </table>
+    {{pass}}
+    <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+  {{=form}}
+    {{if request.function=='change_task':}}
+    {{pass}}
+{{elif request.function=='add_group' or request.function=='change_group':}}
+    {{if request.function=='add_group':}}
+        <h3>用户组添加</h3>
+    {{else:}}
+        <h3>用户组修改</h3>
+
+    {{pass}}
+    <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+  {{=form}}
+{{elif request.function=='add_relation' or request.function=='change_relation':}}
+    {{if request.function=='add_relation':}}
+        <h3>用户的组关系添加</h3>
+    {{else:}}
+        <h3>用户组的组关系修改</h3>
+
+    {{pass}}
+    <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+  {{=form}}
+{{elif request.function=='update':}}
+  <h2>{{=T("Database")}} {{=A(request.args[0],_href=URL('index'))}}
+    {{if hasattr(table,'_primarykey'):}}
+      {{fieldname=request.vars.keys()[0]}}
+      {{dbname=request.args[0]}}
+      {{tablename=request.args[1]}}
+      {{cond = table[fieldname].type in ['string','text'] and '!=""' or '>0'}}
+      {{=T("Table")}} {{=A(tablename,_href=URL('select',args=dbname,vars=dict(query='%s.%s.%s%s'%(dbname,tablename,fieldname,cond))))}}
+      {{=T("Record")}} {{=A('%s=%s'%request.vars.items()[0],_href=URL('update',args=request.args[:2],vars=request.vars))}}
+    {{else:}}
+      {{=T("Table")}} {{=A(request.args[1],_href=URL('select',args=request.args[0],vars=dict(query='%s.%s.id>0'%tuple(request.args[:2]))))}}
+      {{=T("Record id")}} {{=A(request.args[2],_href=URL('update',args=request.args[:3]))}}
+    {{pass}}
+  </h2>
+  <h3>{{=T("Edit current record")}}</h3><br/><br/>{{=form}}
+
+{{elif request.function=='state':}}
+  <h2>{{=T("Internal State")}}</h2>
+  <h3>{{=T("Current request")}}</h3>
+  {{=BEAUTIFY(request)}}
+  <br/><h3>{{=T("Current response")}}</h3>
+  {{=BEAUTIFY(response)}}
+  <br/><h3>{{=T("Current session")}}</h3>
+  {{=BEAUTIFY(session)}}
+
+
+{{elif request.function == 'ccache':}}
+<h2>{{T("Cache")}}</h2>
+<div class="list">
+
+  <div class="list-header">
+    <h3>{{T("Statistics")}}</h3>
+  </div>
+
+  <div class="content">
+    <h4>{{=T("Overview")}}</h4>
+    <p>{{=T.M("Number of entries: **%s**", total['entries'])}}</p>
+    {{if total['entries'] > 0:}}
+    <p>{{=T.M("Hit Ratio: **%(ratio)s%%** (**%(hits)s** %%{hit(hits)} and **%(misses)s** %%{miss(misses)})",
+             dict( ratio=total['ratio'], hits=total['hits'], misses=total['misses']))}}
+    </p>
+    <p>
+      {{=T("Size of cache:")}}
+      {{if object_stats:}}
+        {{=T.M("**%(items)s** %%{item(items)}, **%(bytes)s** %%{byte(bytes)}", dict(items=total['objects'], bytes=total['bytes']))}}
+        {{if total['bytes'] > 524287:}}
+          {{=T.M("(**%.0d MB**)", total['bytes'] / 1048576)}}
+        {{pass}}
+      {{else:}}
+        {{=T.M("**not available** (requires the Python [[Pympler https://pypi.python.org/pypi/Pympler popup]] library)")}}
+      {{pass}}
+    </p>
+    <p>
+      {{=T.M("Cache contains items up to **%(hours)02d** %%{hour(hours)} **%(min)02d** %%{minute(min)} **%(sec)02d** %%{second(sec)} old.",
+              dict(hours=total['oldest'][0], min=total['oldest'][1], sec=total['oldest'][2]))}}
+    </p>
+    {{=BUTTON(T('Cache Keys'), _onclick='jQuery("#all_keys").toggle().toggleClass( "w2p_hidden" );')}}
+    <div class="w2p_hidden" id="all_keys">
+      {{=total['keys']}}
+    </div>
+    <br />
+    {{pass}}
+
+    <h4>{{=T("RAM")}}</h4>
+    <p>{{=T.M("Number of entries: **%s**", ram['entries'])}}</p>
+    {{if ram['entries'] > 0:}}
+    <p>{{=T.M("Hit Ratio: **%(ratio)s%%** (**%(hits)s** %%{hit(hits)} and **%(misses)s** %%{miss(misses)})",
+             dict( ratio=ram['ratio'], hits=ram['hits'], misses=ram['misses']))}}
+    </p>
+    <p>
+      {{=T("Size of cache:")}}
+      {{if object_stats:}}
+        {{=T.M("**%(items)s** items, **%(bytes)s** %%{byte(bytes)}", dict(items=ram['objects'], bytes=ram['bytes']))}}
+        {{if ram['bytes'] > 524287:}}
+          {{=T.M("(**%.0d MB**)", ram['bytes'] / 10485576)}}
+        {{pass}}
+      {{else:}}
+        {{=T.M("``**not available**``:red (requires the Python [[Pympler https://pypi.python.org/pypi/Pympler popup]] library)")}}
+      {{pass}}
+    </p>
+    <p>
+      {{=T.M("RAM contains items up to **%(hours)02d** %%{hour(hours)} **%(min)02d** %%{minute(min)} **%(sec)02d** %%{second(sec)} old.",
+              dict(hours=ram['oldest'][0], min=ram['oldest'][1], sec=ram['oldest'][2]))}}
+    </p>
+    {{=BUTTON(T('RAM Cache Keys'), _onclick='jQuery("#ram_keys").toggle().toggleClass( "w2p_hidden" );')}}
+    <div class="w2p_hidden" id="ram_keys">
+      {{=ram['keys']}}
+    </div>
+    <br />
+    {{pass}}
+
+    <h4>{{=T("DISK")}}</h4>
+    <p>{{=T.M("Number of entries: **%s**", disk['entries'])}}</p>
+    {{if disk['entries'] > 0:}}
+      <p>
+      {{=T.M("Hit Ratio: **%(ratio)s%%** (**%(hits)s** %%{hit(hits)} and **%(misses)s** %%{miss(misses)})",
+            dict(ratio=disk['ratio'], hits=disk['hits'], misses=disk['misses']))}}
+      </p>
+      <p>
+      {{=T("Size of cache:")}}
+      {{if object_stats:}}
+        {{=T.M("**%(items)s** %%{item(items)}, **%(bytes)s** %%{byte(bytes)}", dict( items=disk['objects'], bytes=disk['bytes']))}}
+        {{if disk['bytes'] > 524287:}}
+          {{=T.M("(**%.0d MB**)", disk['bytes'] / 1048576)}}
+        {{pass}}
+      {{else:}}
+        {{=T.M("``**not available**``:red (requires the Python [[Pympler https://pypi.python.org/pypi/Pympler popup]] library)")}}
+      {{pass}}
+      </p>
+      <p>
+      {{=T.M("DISK contains items up to **%(hours)02d** %%{hour(hours)} **%(min)02d** %%{minute(min)} **%(sec)02d** %%{second(sec)} old.",
+                dict(hours=disk['oldest'][0], min=disk['oldest'][1], sec=disk['oldest'][2]))}}
+      </p>
+      {{=BUTTON(T('Disk Cache Keys'), _onclick='jQuery("#disk_keys").toggle().toggleClass( "w2p_hidden" );')}}
+      <div class="w2p_hidden" id="disk_keys">
+      {{=disk['keys']}}
+      </div>
+      <br />
+    {{pass}}
+  </div>
+
+  <div class="list-header">
+    <h3>{{=T("Manage Cache")}}</h3>
+  </div>
+
+  <div class="content">
+    <p>
+      {{=form}}
+    </p>
+  </div>
+</div>
+<div class="clear"></div>
+{{pass}}
+
+{{if request.function=='d3_graph_model':}}
+<h2>{{=T("Graph Model")}}</h2>
+  {{if not databases:}}  
+    {{=T("No databases in this application")}}
+  {{else:}}    
+    <div id="vis"></div>
+      <link rel="stylesheet" href="{{=URL('admin','static','css/d3_graph.css')}}"/>
+      <script>
+        // Define the d3 input data
+        {{from gluon.serializers import json }}
+        var nodes = {{=XML(json(nodes))}};
+        var links = {{=XML(json(links))}};
+        d3_graph();
+      </script>
+  {{pass}}
+{{pass}}  
+
+{{if request.function == 'manage':}}
+<h2>{{=heading}}</h2>
+<ul class="nav nav-tabs">
+  {{for k, tablename in enumerate(tablenames):}}
+  <li{{=XML(' class="active"') if k == 0 else ''}}>
+    <a href="#table-{{=tablename}}" data-toggle="tab">{{=labels[k]}}</a>
+  </li>
+  {{pass}}
+</ul>
+
+<div class="tab-content">
+  {{for k, tablename in enumerate(tablenames):}}
+  <div class="tab-pane{{=XML(' active') if k == 0 else ''}}" id="table-{{=tablename}}">
+    {{=LOAD(f='manage.load', args=[request.args(0), k], ajax=True)}}
+  </div>
+  {{pass}}
+</div>
+{{pass}}
+
+  </div>
+</div>

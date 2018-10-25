@@ -1,0 +1,38 @@
+{{extend 'layout.html'}}
+<div class="row">
+            <div id="web2py_user_form" class="col-lg-6" style="background-color:white; margin: 0 auto 5px auto; box-shadow: 0 0 5px #a1a1a1; border-radius:5px;padding: 20px">
+                <h2>{{=t_record.name}}</h2>
+                <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+                <div class="component_contents">
+                    <table class="table table-striped">
+                        <tr>
+                            <th>姓名</th>
+                            <th>用户名</th>
+                            <th>是否完成</th>
+                            <th>操作</th>
+                        </tr>
+                    {{count = 0}}
+                    {{for person in peo_lst:}}
+                        {{if_done = False}}
+                        <tr>
+                            <td>{{=person}}</td>
+                            {{if prcd_lst[count] is not None:}}
+                                <td>{{=prcd_lst[count].username}}</td>
+                            {{pass}}
+                            <td>{{if person in dopeo_lst:}}✔️{{if_done = True}}{{pass}}</td>
+                            <td>
+                            {{if if_done is False:}}
+                                {{if prcd_lst[count] is not None:}}
+                                    <a class="btn btn-secondary" href={{=URL('default','finish_task',args=[t_record.id, prcd_lst[count].id,"monitor"])}}>完成任务</a>
+                                {{pass}}
+                            {{pass}}
+                            </td>
+                        </tr>
+                        {{count += 1}}
+                    {{pass}}
+                    </table>
+                     <a class="btn btn-primary" href={{=URL('default','history_task',args=[t_record.id])}}>截止任务</a>
+                </div>
+                </div>
+            </div>
+        </div>

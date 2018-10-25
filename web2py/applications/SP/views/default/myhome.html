@@ -1,0 +1,16 @@
+{{extend 'layout.html'}}
+
+        <div class="row">
+            <div id="web2py_user_form" class="col-lg-6" style="background-color:white; margin: 0 auto 5px auto; box-shadow: 0 0 5px #a1a1a1; border-radius:5px;padding: 20px">
+                <h2>{{=auth.user.name}}</h2>
+                <HR style="FILTER: alpha(opacity=100,finishopacity=0,style=3)" color=#987cb9 SIZE=3>
+                <div class="component_contents">
+                    {{=info_menu}}
+                </div>
+                <div class="jumbotron jumbotron-fluid" style="padding:30px;word-wrap:break-word;">
+                    <div class="container center">
+                        <a class="btn btn-secondary" href={{=URL('default','change_settings')}}>个人设置</a>
+                    </div>
+                </div>
+            </div>
+        </div>
